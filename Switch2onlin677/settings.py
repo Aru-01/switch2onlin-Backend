@@ -34,6 +34,7 @@ INSTALLED_APPS = [
     "conversation",
     "django_filters",
     "leads",
+    "dashboard",
 ]
 
 MIDDLEWARE = [
