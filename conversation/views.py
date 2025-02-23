@@ -138,13 +138,20 @@ class SendMessageView(views.APIView):
             )
 
         service = MetaApiService()
-        message_data = {}
-        if text:
-            message_data = {"type": "text", "text": text}
-        elif image_url:
-            message_data = {"type": "image", "link": image_url}
+        result = None
 
-        result = service.send_message(recipient_id, message_data, platform)
+        # Send image first if provided
+        if image_url:
+            result = service.send_message(recipient_id, {"type": "image", "link": image_url}, platform)
+            if "error" in result:
+                return response.Response(result, status=status.HTTP_400_BAD_REQUEST)
+
+        # Send text next if provided
+        if text:
+            result = service.send_message(recipient_id, {"type": "text", "text": text}, platform)
+            if "error" in result:
+                return response.Response(result, status=status.HTTP_400_BAD_REQUEST)
+
         if result:
             return response.Response(result, status=status.HTTP_200_OK)
         return response.Response(

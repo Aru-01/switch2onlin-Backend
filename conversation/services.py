@@ -118,7 +118,13 @@ class MetaApiService:
             )
             # Ensure a fallback name exists
             sender = ConversationSender.objects.filter(sender_id=user_id).first()
-            if sender and not sender.full_name:
+            is_placeholder = (
+                not sender.full_name 
+                or sender.full_name == "-" 
+                or sender.full_name.startswith("User-") 
+                or sender.full_name.startswith("IG-User-")
+            )
+            if sender and is_placeholder:
                 suffix = user_id[-4:] if len(user_id) >= 4 else user_id
                 sender.full_name = f"IG-User-{suffix}"
                 sender.save()
@@ -217,10 +223,19 @@ class MetaApiService:
             sender_id=sender_id, defaults={"platform": platform}
         )
 
-        if sender_name and not sender.full_name:
-            sender.full_name = sender_name
+        is_placeholder = (
+            not sender.full_name 
+            or sender.full_name == "-" 
+            or sender.full_name.startswith("User-") 
+            or sender.full_name.startswith("IG-User-")
+        )
 
-        sender.save()
+        if sender_name and is_placeholder:
+            sender.full_name = sender_name
+            sender.save()
+            is_placeholder = False  # Name is now set
+        else:
+            sender.save()
 
         obj, msg_created = ConversationMessage.objects.get_or_create(
             message_id=msg_id,
@@ -239,7 +254,7 @@ class MetaApiService:
             logger.debug(f"Skipping duplicate message_id={msg_id}")
             return obj
 
-        if not sender.full_name and platform != PlatformChoices.WHATSAPP:
+        if is_placeholder and platform != PlatformChoices.WHATSAPP:
             self.fetch_user_profile(sender_id, platform)
 
         if media_url and msg_type != MessageTypeChoices.TEXT:
