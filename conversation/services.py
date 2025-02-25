@@ -228,11 +228,16 @@ class MetaApiService:
             or sender.full_name == "-" 
             or sender.full_name.startswith("User-") 
             or sender.full_name.startswith("IG-User-")
+            or sender.full_name == sender_id
         )
 
-        if sender_name and is_placeholder:
-            sender.full_name = sender_name
-            sender.save()
+        # For WhatsApp, the webhook always sends the current profile name, so we can prioritize it
+        should_update_name = sender_name and (is_placeholder or platform == "whatsapp")
+
+        if should_update_name:
+            if sender.full_name != sender_name:
+                sender.full_name = sender_name
+                sender.save()
             is_placeholder = False  # Name is now set
         else:
             sender.save()

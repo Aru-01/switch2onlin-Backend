@@ -1,5 +1,6 @@
 from conversation.models import PlatformChoices, MessageTypeChoices
 
+
 class WebhookParser:
     @staticmethod
     def parse_messenger_event(messaging_event):
@@ -11,7 +12,7 @@ class WebhookParser:
             return None
 
         attachments = msg.get("attachments", [])
-        
+
         media_url = None
         msg_type = MessageTypeChoices.TEXT
         if attachments:
@@ -21,10 +22,10 @@ class WebhookParser:
                 "image": MessageTypeChoices.IMAGE,
                 "video": MessageTypeChoices.VIDEO,
                 "audio": MessageTypeChoices.AUDIO,
-                "file": MessageTypeChoices.FILE
+                "file": MessageTypeChoices.FILE,
             }
             msg_type = type_map.get(att_type, MessageTypeChoices.FILE)
-        
+
         return {
             "sender_id": sender_id,
             "platform": PlatformChoices.FACEBOOK,
@@ -45,7 +46,7 @@ class WebhookParser:
             return None
 
         attachments = msg.get("attachments", [])
-        
+
         media_url = None
         msg_type = MessageTypeChoices.TEXT
         if attachments:
@@ -55,10 +56,10 @@ class WebhookParser:
                 "image": MessageTypeChoices.IMAGE,
                 "video": MessageTypeChoices.VIDEO,
                 "audio": MessageTypeChoices.AUDIO,
-                "file": MessageTypeChoices.FILE
+                "file": MessageTypeChoices.FILE,
             }
             msg_type = type_map.get(att_type, MessageTypeChoices.FILE)
-        
+
         return {
             "sender_id": sender_id,
             "platform": PlatformChoices.INSTAGRAM,
@@ -75,7 +76,7 @@ class WebhookParser:
         msg_type = MessageTypeChoices.TEXT
         media_url = None
         text_content = None
-        
+
         # Map WhatsApp types to our internal MessageTypeChoices
         type_map = {
             "image": MessageTypeChoices.IMAGE,
@@ -85,7 +86,7 @@ class WebhookParser:
             "sticker": MessageTypeChoices.STICKER,
             "location": MessageTypeChoices.LOCATION,
         }
-        
+
         if whatsapp_type in type_map:
             msg_type = type_map[whatsapp_type]
             media_data = msg.get(whatsapp_type, {})
@@ -93,7 +94,7 @@ class WebhookParser:
             # --- CAPTION FIX ---
             # Extract caption from image/video/document if it exists
             text_content = media_data.get("caption")
-        
+
         # If it's a plain text message, get the body
         if whatsapp_type == "text":
             text_content = msg.get("text", {}).get("body")
