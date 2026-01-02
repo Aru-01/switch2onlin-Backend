@@ -181,7 +181,7 @@ class ProductUploadProxyView(BaseAIProxyView):
 
     @swagger_auto_schema(
         operation_summary="Upload products",
-        tags=["AI Proxy"],
+        tags=["AI Proxy - Products"],
     )
     def post(self, request):
         files = {
