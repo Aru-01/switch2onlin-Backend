@@ -257,7 +257,7 @@ class ProductDetailProxyView(BaseAIProxyView):
 
     @swagger_auto_schema(
         operation_summary="Delete product by barcode",
-        tags=["AI Proxy"],
+        tags=["AI Proxy - Products Barcode"],
     )
     def delete(self, request, barcode):
         return self.proxy_request("DELETE", f"/products/{barcode}")
