@@ -1,6 +1,5 @@
 from django.urls import path
 from ai_proxy import views
-from ai_proxy.views import SubcategoryDetailsProxyView
 
 urlpatterns = [
     path("rate/", views.RateProxyView.as_view(), name="ai-rate-proxy"),
@@ -66,7 +65,7 @@ urlpatterns = [
     ),
     path(
         "subcategories/<int:id>/",
-        SubcategoryDetailsProxyView.as_view(),
+        views.SubcategoryDetailsProxyView.as_view(),
         name="proxy-subcategory-details",
     ),
 ]
