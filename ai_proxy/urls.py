@@ -1,7 +1,6 @@
 from django.urls import path
 from ai_proxy import views
 from ai_proxy.views import (
-    CategoryDetailsProxyView,
     BrandDetailsProxyView,
     BrandListCreateProxyView,
     SubcategoryDetailsProxyView,
@@ -52,7 +51,7 @@ urlpatterns = [
     ),
     path(
         "categories/<int:id>/",
-        CategoryDetailsProxyView.as_view(),
+        views.CategoryDetailsProxyView.as_view(),
         name="proxy-category-details",
     ),
     path(
