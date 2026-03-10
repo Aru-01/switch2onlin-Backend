@@ -1,5 +1,5 @@
+from django.shortcuts import get_object_or_404
 from rest_framework.parsers import MultiPartParser, FormParser
-from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenRefreshView
 from rest_framework.views import APIView
 from rest_framework import status, permissions
@@ -39,7 +39,7 @@ class SelfProfileView(APIView):
         return Response(serializer.data)
 
 
-class UserManagementView(APIView):
+class UserListCreateView(APIView):
     permission_classes = [IsAuthenticated]
 
     @swagger_auto_schema(
@@ -68,6 +68,10 @@ class UserManagementView(APIView):
             status=status.HTTP_201_CREATED,
         )
 
+
+class UserDeleteView(APIView):
+    permission_classes = [IsAuthenticated]
+
     @swagger_auto_schema(
         operation_summary="Delete a user",
         manual_parameters=[
@@ -78,21 +82,17 @@ class UserManagementView(APIView):
                 type=openapi.TYPE_INTEGER,
             )
         ],
-        responses={204: "User deleted"},
+        responses={200: "User deleted"},
         tags=["Admin / Users"],
     )
     def delete(self, request, user_id):
-        try:
-            user = User.objects.get(pk=user_id)
-            user.delete()
-            return Response(
-                {"message": f"User {user.name} deleted successfully"},
-                status=status.HTTP_200_OK,
-            )
-        except User.DoesNotExist:
-            return Response(
-                {"error": "User not found"}, status=status.HTTP_404_NOT_FOUND
-            )
+        user = get_object_or_404(User, pk=user_id)
+        user.delete()
+
+        return Response(
+            {"message": "User deleted successfully"},
+            status=status.HTTP_200_OK,
+        )
 
 
 class LoginView(APIView):

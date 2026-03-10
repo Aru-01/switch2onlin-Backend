@@ -9,13 +9,14 @@ from accounts.views import (
     ResetPasswordView,
     ResendOtpView,
     CustomTokenRefreshView,
-    UserManagementView,
+    UserListCreateView,
+    UserDeleteView,
 )
 
 
 urlpatterns = [
-    path("users/", UserManagementView.as_view(), name="self-profile"),
-    path("users/<int:user_id>/", UserManagementView.as_view(), name="user-delete"),
+    path("users/", UserListCreateView.as_view()),
+    path("users/<int:user_id>/", UserDeleteView.as_view()),
     path("me/", SelfProfileView.as_view(), name="self-profile"),
     path("login/", LoginView.as_view(), name="login"),
     path("change-password/", ChangePasswordView.as_view(), name="change-password"),

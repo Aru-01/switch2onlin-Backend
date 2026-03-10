@@ -134,7 +134,12 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:5174",
     "https://charissa-intuitable-corroboratorily.ngrok-free.dev",
 ]
-ALLOWED_HOSTS = ["172.252.13.97", "127.0.0.1", ".ngrok-free.dev"]
+ALLOWED_HOSTS = [
+    "172.252.13.97",
+    "127.0.0.1",
+    ".ngrok-free.dev",
+    "test11.fireai.agency",
+]
 
 CSRF_TRUSTED_ORIGINS = [
     "https://charissa-intuitable-corroboratorily.ngrok-free.dev",
