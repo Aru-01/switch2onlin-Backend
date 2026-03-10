@@ -30,7 +30,9 @@ INSTALLED_APPS = [
     "rest_framework_simplejwt",
     "corsheaders",
     "debug_toolbar",
+    "api",
     "accounts",
+    "agent_manage",
 ]
 
 MIDDLEWARE = [
