@@ -205,3 +205,7 @@ class ResendOtpSerializer(serializers.Serializer):
 
         otp_obj = create_otp(user)
         send_otp_email(user.email, otp_obj.code)
+
+
+class TokenRefreshSerializer(serializers.Serializer):
+    refresh = serializers.CharField()

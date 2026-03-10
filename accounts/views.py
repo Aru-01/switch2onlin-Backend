@@ -205,15 +205,10 @@ class ResendOtpView(APIView):
 
 
 class CustomTokenRefreshView(TokenRefreshView):
+
     @swagger_auto_schema(
         operation_summary="Refresh Access Token",
-        request_body=openapi.Schema(
-            type=openapi.TYPE_OBJECT,
-            properties={
-                "refresh": openapi.Schema(type=openapi.TYPE_STRING),
-            },
-            required=["refresh"],
-        ),
+        request_body=sz.TokenRefreshSerializer,
         responses={
             200: openapi.Response(
                 description="New access token",
