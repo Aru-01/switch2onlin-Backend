@@ -1,7 +1,6 @@
 from django.urls import path
+from ai_proxy import views
 from ai_proxy.views import (
-    RateProxyView,
-    PromptProxyView,
     KnowledgeProxyView,
     KnowledgeUploadProxyView,
     KnowledgeDetailProxyView,
@@ -19,8 +18,8 @@ from ai_proxy.views import (
 )
 
 urlpatterns = [
-    path("rate/", RateProxyView.as_view(), name="ai-rate-proxy"),
-    path("prompt/", PromptProxyView.as_view(), name="ai-prompt-proxy"),
+    path("rate/", views.RateProxyView.as_view(), name="ai-rate-proxy"),
+    path("prompt/", views.PromptProxyView.as_view(), name="ai-prompt-proxy"),
     path("knowledge/", KnowledgeProxyView.as_view(), name="ai-knowledge-proxy"),
     path(
         "knowledge/upload/",
