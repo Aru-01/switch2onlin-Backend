@@ -33,6 +33,7 @@ INSTALLED_APPS = [
     "api",
     "accounts",
     "agent_manage",
+    "conversation",
 ]
 
 MIDDLEWARE = [
@@ -156,3 +157,10 @@ EMAIL_PORT = config("EMAIL_PORT")
 EMAIL_USE_TLS = config("EMAIL_USE_TLS")
 EMAIL_HOST_USER = config("EMAIL_HOST_USER")
 EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD")
+
+# Meta API Configuration
+META_VERIFY_TOKEN = config("META_VERIFY_TOKEN", default="my_verify_token")
+META_PAGE_ACCESS_TOKEN = config("META_PAGE_ACCESS_TOKEN", default="")
+META_PAGE_ID = config("META_PAGE_ID", default="")
+META_WHATSAPP_PHONE_NUMBER_ID = config("META_WHATSAPP_PHONE_NUMBER_ID", default="")
+META_WHATSAPP_BUSINESS_ACCOUNT_ID = config("META_WHATSAPP_BUSINESS_ACCOUNT_ID", default="")
