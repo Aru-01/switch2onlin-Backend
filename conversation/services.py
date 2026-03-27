@@ -69,18 +69,30 @@ class MetaApiService:
         fields = "first_name,last_name,profile_pic" if platform == PlatformChoices.FACEBOOK else "username,profile_picture_url"
         status_code, data = self.client.fetch_user_profile(user_id, fields)
         
+        sender = ConversationSender.objects.filter(sender_id=user_id).first()
+        if not sender:
+            return None
+
         if status_code == 200:
-            sender = ConversationSender.objects.filter(sender_id=user_id).first()
-            if sender:
-                if platform == PlatformChoices.FACEBOOK:
-                    sender.full_name = f"{data.get('first_name', '')} {data.get('last_name', '')}".strip() or "Facebook User"
-                    sender.profile_pic_url = data.get("profile_pic")
-                else:
-                    sender.full_name = data.get("username", "Instagram User")
-                    sender.profile_pic_url = data.get("profile_picture_url")
-                sender.save()
-            return data
-        return None
+            if platform == PlatformChoices.FACEBOOK:
+                first_name = data.get("first_name", "")
+                last_name = data.get("last_name", "")
+                sender.full_name = f"{first_name} {last_name}".strip()
+                sender.profile_pic_url = data.get("profile_pic")
+            else:
+                sender.full_name = data.get("username")
+                sender.profile_pic_url = data.get("profile_picture_url")
+        
+        # Fallback if name is still empty after API call or on failure
+        if not sender.full_name:
+            if platform == PlatformChoices.WHATSAPP:
+                sender.full_name = user_id
+            else:
+                suffix = user_id[-4:] if len(user_id) >= 4 else user_id
+                sender.full_name = f"User-{suffix}"
+        
+        sender.save()
+        return data if status_code == 200 else None
 
     def handle_webhook(self, data: dict):
         obj_type = data.get("object")
