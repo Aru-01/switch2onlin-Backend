@@ -83,7 +83,7 @@ class ConversationSenderViewSet(viewsets.ReadOnlyModelViewSet):
         """
         sender = self.get_object()
         messages = sender.messages.all().order_by("timestamp")
-        serializer = ConversationMessageSerializer(messages, many=True)
+        serializer = ConversationMessageSerializer(messages, many=True, context={"request": request})
         return response.Response(serializer.data)
 
 
