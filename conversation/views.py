@@ -1,4 +1,5 @@
 from django.conf import settings
+from django.http import HttpResponse, StreamingHttpResponse
 from rest_framework import viewsets, views, status, response, generics
 from rest_framework.decorators import action
 from django.shortcuts import get_object_or_404
@@ -140,3 +141,49 @@ class SendMessageView(views.APIView):
             {"error": "Failed to send message"},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR,
         )
+
+
+class MediaProxyView(views.APIView):
+    """
+    Proxies media content from Meta Graph API using its ID.
+    This resolves the 'wamid' media IDs into actual image/file data.
+    """
+
+    authentication_classes = []
+    permission_classes = []
+
+    @swagger_auto_schema(
+        operation_description="Resolves and serves media (image/video/file) from Meta using its ID.",
+        manual_parameters=[
+            openapi.Parameter(
+                "media_id",
+                openapi.IN_PATH,
+                description="The Meta Media ID",
+                type=openapi.TYPE_STRING,
+            )
+        ],
+        responses={200: "Binary media data"},
+        tags=["Conversations"],
+    )
+    def get(self, request, media_id):
+        service = MetaApiService()
+        status_code, media_info = service.client.get_media_info(media_id)
+
+        if status_code != 200:
+            return HttpResponse("Media ID not found", status=404)
+
+        download_url = media_info.get("url")
+        if not download_url:
+            return HttpResponse("Download URL not found", status=404)
+
+        # Download the actual bytes from Meta CDN
+        media_response = service.client.download_media_content(download_url)
+        if not media_response or media_response.status_code != 200:
+            return HttpResponse("Failed to download media from Meta", status=502)
+
+        # Proxies the response with original Content-Type
+        return StreamingHttpResponse(
+            media_response.iter_content(chunk_size=8192),
+            content_type=media_info.get("mime_type", "application/octet-stream"),
+        )
+

@@ -36,3 +36,27 @@ class MetaApiClient:
         except Exception as e:
             logger.error(f"Meta Profile Fetch Error: {str(e)}")
             return 500, {"error": str(e)}
+
+    def get_media_info(self, media_id):
+        """
+        Gets the download URL for a given Meta Media ID.
+        """
+        url = f"https://graph.facebook.com/v21.0/{media_id}"
+        try:
+            response = requests.get(url, headers=self.get_headers())
+            return response.status_code, response.json()
+        except Exception as e:
+            logger.error(f"Meta Media Info Error: {str(e)}")
+            return 500, {"error": str(e)}
+
+    def download_media_content(self, url):
+        """
+        Downloads the raw media bytes from a Meta CDN URL.
+        """
+        try:
+            # Note: Meta CDN URLs often require the same Bearer token
+            response = requests.get(url, headers=self.get_headers(), stream=True)
+            return response
+        except Exception as e:
+            logger.error(f"Meta Media Download Error: {str(e)}")
+            return None
