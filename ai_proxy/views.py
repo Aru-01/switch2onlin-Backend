@@ -6,7 +6,6 @@ from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 from ai_proxy import schemas as sc
 from ai_proxy.schemas import (
-    CATEGORY_LIST_PARAMETERS,
     CATEGORY_LIST_RESPONSE,
     BRAND_CREATE_REQUEST,
     BRAND_CREATE_RESPONSE,
@@ -274,7 +273,7 @@ Retrieve category list with:
 - Pagination
 """,
         tags=["AI Proxy Categories"],
-        manual_parameters=CATEGORY_LIST_PARAMETERS,
+        manual_parameters=sc.CATEGORY_LIST_PARAMETERS,
         responses={
             200: CATEGORY_LIST_RESPONSE,
         },
