@@ -6,7 +6,6 @@ from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 from ai_proxy import schemas as sc
 from ai_proxy.schemas import (
-    CATEGORY_CREATE_REQUEST,
     CATEGORY_CREATE_RESPONSE,
     CATEGORY_DETAILS_RESPONSE,
     CATEGORY_LIST_PARAMETERS,
@@ -295,7 +294,7 @@ Features:
 - Arabic name support
 """,
         tags=["AI Proxy Categories"],
-        request_body=CATEGORY_CREATE_REQUEST,
+        request_body=sc.CATEGORY_CREATE_REQUEST,
         responses={
             201: CATEGORY_CREATE_RESPONSE,
         },
