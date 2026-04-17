@@ -4,6 +4,7 @@ from conversation.models import (
     ConversationMessage,
 )
 from django.urls import reverse
+from django.conf import settings
 
 
 class ConversationMessageSerializer(serializers.ModelSerializer):
@@ -17,12 +18,18 @@ class ConversationMessageSerializer(serializers.ModelSerializer):
         if not obj.media_url:
             return None
         
+        request = self.context.get("request")
+        if not request:
+            return obj.media_url
+
+        # Check if it's a local persisted path
+        if str(obj.media_url).startswith("conversations/"):
+            return request.build_absolute_uri(settings.MEDIA_URL + str(obj.media_url))
+
         # If media_url is a numeric ID (WhatsApp/Meta Media ID)
-        if obj.media_url.isdigit():
-            request = self.context.get("request")
-            if request:
-                url_path = reverse("media_proxy", kwargs={"media_id": obj.media_url})
-                return request.build_absolute_uri(url_path)
+        if str(obj.media_url).isdigit():
+            url_path = reverse("media_proxy", kwargs={"media_id": obj.media_url})
+            return request.build_absolute_uri(url_path)
         
         return obj.media_url
 

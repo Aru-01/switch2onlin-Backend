@@ -9,6 +9,8 @@ from conversation.models import (
 )
 from conversation.api_client import MetaApiClient
 from conversation.webhook_handler import WebhookParser
+from django.core.files.storage import default_storage
+from django.core.files.base import ContentFile
 
 logger = logging.getLogger(__name__)
 
@@ -131,4 +133,50 @@ class MetaApiService:
         )
         if not sender.full_name:
             self.fetch_user_profile(sender_id, platform)
+            
+        # If it's media, download it locally
+        if media_url and msg_type != MessageTypeChoices.TEXT:
+            # We don't want to block the webhook for too long, 
+            # but for this simple setup we'll do it synchronously.
+            self.download_and_persist_media(media_url, obj)
+            
         return obj
+
+    def download_and_persist_media(self, media_id, message_obj):
+        """
+        Downloads media from Meta and saves it to the local filesystem.
+        """
+        # If it's already a local path, skip
+        if not str(media_id).isdigit():
+            return
+
+        status_code, media_info = self.client.get_media_info(media_id)
+        if status_code != 200:
+            logger.error(f"Persistence: Could not fetch info for media {media_id}")
+            return
+
+        download_url = media_info.get("url")
+        mime_type = media_info.get("mime_type", "application/octet-stream")
+        
+        # Simple extension mapping
+        ext_map = {"image/jpeg": "jpg", "image/png": "png", "video/mp4": "mp4", "audio/mpeg": "mp3", "application/pdf": "pdf"}
+        ext = ext_map.get(mime_type, "bin")
+
+        media_response = self.client.download_media_content(download_url)
+        if not media_response or media_response.status_code != 200:
+            logger.error(f"Persistence: Could not download bytes for media {media_id}")
+            return
+
+        filename = f"conversations/{media_id}.{ext}"
+        
+        # Overwrite if exists to avoid duplicates
+        if default_storage.exists(filename):
+            default_storage.delete(filename)
+            
+        path = default_storage.save(filename, ContentFile(media_response.content))
+        
+        # Update the message object with local path
+        message_obj.media_url = path
+        message_obj.save()
+        logger.info(f"Media persisted to: {path}")
+

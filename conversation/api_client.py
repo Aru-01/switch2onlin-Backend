@@ -44,9 +44,11 @@ class MetaApiClient:
         url = f"https://graph.facebook.com/v21.0/{media_id}"
         try:
             response = requests.get(url, headers=self.get_headers())
+            if response.status_code != 200:
+                logger.error(f"Meta Media Info Error: {response.status_code} - {response.text}")
             return response.status_code, response.json()
         except Exception as e:
-            logger.error(f"Meta Media Info Error: {str(e)}")
+            logger.error(f"Meta Media Info Exception: {str(e)}")
             return 500, {"error": str(e)}
 
     def download_media_content(self, url):

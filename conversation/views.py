@@ -166,24 +166,52 @@ class MediaProxyView(views.APIView):
         tags=["Conversations"],
     )
     def get(self, request, media_id):
+        # Check if we already have this message and if it's already persisted
+        msg = ConversationMessage.objects.filter(media_url=media_id).first()
+        
         service = MetaApiService()
+        
+        # If the message exists, we can try to persist it now if not done yet
+        if msg:
+            service.download_and_persist_media(media_id, msg)
+            if not str(msg.media_url).isdigit():
+                # It was just persisted! Redirect to the new local URL
+                from django.urls import reverse
+                serializer = ConversationMessageSerializer(msg, context={"request": request})
+                return response.Response({"url": serializer.data["media_url"]}, status=302)
+
+        # Fallback to direct proxy for IDs that aren't yet in our local DB or failed to persist
         status_code, media_info = service.client.get_media_info(media_id)
 
         if status_code != 200:
-            return HttpResponse("Media ID not found", status=404)
+            return response.Response(
+                {
+                    "error": "Meta API Error (Media Info)",
+                    "status_code": status_code,
+                    "details": media_info,
+                },
+                status=status_code,
+            )
 
         download_url = media_info.get("url")
         if not download_url:
-            return HttpResponse("Download URL not found", status=404)
+            return response.Response(
+                {"error": "Download URL not found in Meta response"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
 
         # Download the actual bytes from Meta CDN
         media_response = service.client.download_media_content(download_url)
         if not media_response or media_response.status_code != 200:
-            return HttpResponse("Failed to download media from Meta", status=502)
+            return response.Response(
+                {"error": "Failed to download media bytes from Meta CDN"},
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
 
         # Proxies the response with original Content-Type
         return StreamingHttpResponse(
             media_response.iter_content(chunk_size=8192),
             content_type=media_info.get("mime_type", "application/octet-stream"),
         )
+
 
