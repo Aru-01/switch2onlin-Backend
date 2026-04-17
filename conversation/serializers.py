@@ -19,15 +19,20 @@ class ConversationMessageSerializer(serializers.ModelSerializer):
             return None
         
         request = self.context.get("request")
-        if not request:
+        
+        # Check if it's already an absolute URL
+        if str(obj.media_url).startswith(("http://", "https://")):
             return obj.media_url
 
-        # Check if it's a local persisted path
-        if str(obj.media_url).startswith("conversations/"):
-            return request.build_absolute_uri(settings.MEDIA_URL + str(obj.media_url))
+        # Check if it's a local persisted path (e.g., 'conversations/...')
+        # We check if it looks like a path or doesn't look like a numeric ID
+        if not str(obj.media_url).isdigit():
+            if not request:
+                return f"{settings.MEDIA_URL}{obj.media_url}"
+            return request.build_absolute_uri(f"{settings.MEDIA_URL}{obj.media_url}")
 
-        # If media_url is a numeric ID (WhatsApp/Meta Media ID)
-        if str(obj.media_url).isdigit():
+        # If it's a numeric ID (WhatsApp/Meta Media ID), use the proxy
+        if request:
             url_path = reverse("media_proxy", kwargs={"media_id": obj.media_url})
             return request.build_absolute_uri(url_path)
         

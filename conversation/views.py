@@ -167,18 +167,29 @@ class MediaProxyView(views.APIView):
     )
     def get(self, request, media_id):
         # Check if we already have this message and if it's already persisted
-        msg = ConversationMessage.objects.filter(media_url=media_id).first()
+        # We look for the exact ID OR a path that contains the ID (like 'conversations/123.jpg')
+        from django.db.models import Q
+        msg = ConversationMessage.objects.filter(
+            Q(media_url=media_id) | Q(media_url__icontains=media_id)
+        ).first()
         
         service = MetaApiService()
         
-        # If the message exists, we can try to persist it now if not done yet
+        # If the message exists, check if it's already persisted
         if msg:
+            if not str(msg.media_url).isdigit():
+                # Already persisted! Redirect directly
+                from django.http import HttpResponseRedirect
+                serializer = ConversationMessageSerializer(msg, context={"request": request})
+                return HttpResponseRedirect(serializer.data["media_url"])
+
+            # Not persisted yet, try to persist it now
             service.download_and_persist_media(media_id, msg)
             if not str(msg.media_url).isdigit():
                 # It was just persisted! Redirect to the new local URL
-                from django.urls import reverse
+                from django.http import HttpResponseRedirect
                 serializer = ConversationMessageSerializer(msg, context={"request": request})
-                return response.Response({"url": serializer.data["media_url"]}, status=302)
+                return HttpResponseRedirect(serializer.data["media_url"])
 
         # Fallback to direct proxy for IDs that aren't yet in our local DB or failed to persist
         status_code, media_info = service.client.get_media_info(media_id)

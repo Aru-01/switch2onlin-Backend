@@ -68,30 +68,42 @@ class MetaApiService:
             return response_data
 
     def fetch_user_profile(self, user_id, platform):
-        fields = "first_name,last_name,profile_pic" if platform == PlatformChoices.FACEBOOK else "username,profile_picture_url"
-        status_code, data = self.client.fetch_user_profile(user_id, fields)
-        
+        """
+        Fetches user profile (name + picture) from Meta Graph API.
+        - Facebook: Page-Scoped User ID (PSID) → Graph API returns name, profile_pic.
+        - Instagram: Instagram-Scoped User ID (IGSID) → Graph API returns name, profile_pic.
+        - WhatsApp: NOT supported via Graph API. Name comes from webhook contacts[].
+        """
+        if platform == PlatformChoices.WHATSAPP:
+            return None
+
         sender = ConversationSender.objects.filter(sender_id=user_id).first()
         if not sender:
             return None
 
+        # Facebook and Instagram both support 'name' and 'profile_pic'
+        # via the Page Access Token when using the scoped user ID.
+        fields = "name,profile_pic"
+
+        status_code, data = self.client.fetch_user_profile(user_id, fields)
+
         if status_code == 200:
-            if platform == PlatformChoices.FACEBOOK:
-                first_name = data.get("first_name", "")
-                last_name = data.get("last_name", "")
-                sender.full_name = f"{first_name} {last_name}".strip()
-                sender.profile_pic_url = data.get("profile_pic")
-            else:
-                sender.full_name = data.get("username")
-                sender.profile_pic_url = data.get("profile_picture_url")
-        
-        # Fallback if name is still empty after API call or on failure
+            name = data.get("name", "")
+            pic = data.get("profile_pic")
+            
+            if name:
+                sender.full_name = name
+            if pic:
+                sender.profile_pic_url = pic
+                
+            logger.info(f"Profile OK for {platform} user {user_id}: name='{sender.full_name}', has_pic={bool(pic)}")
+        else:
+            logger.warning(f"Profile fetch failed for {platform} user {user_id}: {data}")
+
+        # Fallback if name is still empty
         if not sender.full_name:
-            if platform == PlatformChoices.WHATSAPP:
-                sender.full_name = user_id
-            else:
-                suffix = user_id[-4:] if len(user_id) >= 4 else user_id
-                sender.full_name = f"User-{suffix}"
+            suffix = user_id[-4:] if len(user_id) >= 4 else user_id
+            sender.full_name = f"User-{suffix}"
         
         sender.save()
         return data if status_code == 200 else None
@@ -110,17 +122,25 @@ class MetaApiService:
         elif obj_type == "whatsapp_business_account":
             for entry in data.get("entry", []):
                 for change in entry.get("changes", []):
-                    messages = change.get("value", {}).get("messages", [])
+                    value = change.get("value", {})
+                    messages = value.get("messages", [])
+                    # 'contacts' array in the webhook value contains name info
+                    contacts = value.get("contacts", [])
                     for msg in messages:
-                        parsed = WebhookParser.parse_whatsapp_event(msg)
+                        parsed = WebhookParser.parse_whatsapp_event(msg, contacts=contacts)
                         self._save_message(**parsed)
         return True
 
-    def _save_message(self, sender_id, platform, msg_id, text, media_url, msg_type, is_from_customer=True, timestamp=None):
-        sender, _ = ConversationSender.objects.get_or_create(sender_id=sender_id, defaults={"platform": platform})
-        sender.save() # Update last_interaction
+    def _save_message(self, sender_id, platform, msg_id, text, media_url, msg_type, is_from_customer=True, timestamp=None, sender_name=None):
+        sender, created = ConversationSender.objects.get_or_create(sender_id=sender_id, defaults={"platform": platform})
         
-        obj, created = ConversationMessage.objects.get_or_create(
+        # If sender name came from the webhook payload (WhatsApp contacts field), save it directly
+        if sender_name and not sender.full_name:
+            sender.full_name = sender_name
+        
+        sender.save()  # Always update last_interaction
+        
+        obj, _ = ConversationMessage.objects.get_or_create(
             message_id=msg_id,
             defaults={
                 "sender": sender,
@@ -131,13 +151,13 @@ class MetaApiService:
                 "timestamp": timestamp or timezone.now()
             }
         )
-        if not sender.full_name:
+        
+        # For Facebook/Instagram where name isn't in the webhook, fetch from Graph API
+        if not sender.full_name and platform != PlatformChoices.WHATSAPP:
             self.fetch_user_profile(sender_id, platform)
             
         # If it's media, download it locally
         if media_url and msg_type != MessageTypeChoices.TEXT:
-            # We don't want to block the webhook for too long, 
-            # but for this simple setup we'll do it synchronously.
             self.download_and_persist_media(media_url, obj)
             
         return obj
@@ -150,17 +170,36 @@ class MetaApiService:
         if not str(media_id).isdigit():
             return
 
+        filename_base = f"conversations/{media_id}"
+        # Check if any file with this base name already exists (regardless of extension)
+        # This prevents redundant downloads if we already have it.
+        # Simple implementation: check common extensions or just the base.
+        
         status_code, media_info = self.client.get_media_info(media_id)
         if status_code != 200:
-            logger.error(f"Persistence: Could not fetch info for media {media_id}")
+            logger.error(f"Persistence: Could not fetch info for media {media_id} - {media_info}")
             return
 
         download_url = media_info.get("url")
         mime_type = media_info.get("mime_type", "application/octet-stream")
         
-        # Simple extension mapping
-        ext_map = {"image/jpeg": "jpg", "image/png": "png", "video/mp4": "mp4", "audio/mpeg": "mp3", "application/pdf": "pdf"}
-        ext = ext_map.get(mime_type, "bin")
+        logger.info(f"Persistence: Info fetched for {media_id}. Type: {mime_type}")
+        
+        # Broad extension mapping
+        ext_map = {
+            "image/jpeg": "jpg", 
+            "image/png": "png", 
+            "image/webp": "webp",
+            "video/mp4": "mp4", 
+            "audio/mpeg": "mp3", 
+            "audio/ogg": "ogg",
+            "audio/amr": "amr",
+            "application/pdf": "pdf",
+            "application/msword": "doc",
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "docx",
+            "image/gif": "gif"
+        }
+        ext = ext_map.get(mime_type, mime_type.split("/")[-1] if "/" in mime_type else "bin")
 
         media_response = self.client.download_media_content(download_url)
         if not media_response or media_response.status_code != 200:

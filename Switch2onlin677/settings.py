@@ -10,10 +10,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = "django-insecure-8a=-hl6kihv)h3tg&xf=81=7_a+n^&sxag97t1jb*b4_p#2bm="
-
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+SECRET_KEY = config("SECRET_KEY")
+DEBUG = config("DEBUG", default=False, cast=bool)
 
 
 # Application definition
@@ -139,17 +137,28 @@ CORS_ALLOWED_ORIGINS = [
     "https://switch2onlin677-frontend.vercel.app",
 ]
 ALLOWED_HOSTS = [
-    "172.252.13.97",
-    "127.0.0.1",
-    ".ngrok-free.dev",
-    "test11.fireai.agency",
+    h.strip() for h in config("ALLOWED_HOSTS", default="127.0.0.1").split(",")
+]
+# ALLOWED_HOSTS = config("ALLOWED_HOSTS", default="127.0.0.1").split(",")
+CSRF_TRUSTED_ORIGINS = [
+    o.strip() for o in config("CSRF_TRUSTED_ORIGINS", default="").split(",") if o
+]
+# CSRF_TRUSTED_ORIGINS = config("CSRF_TRUSTED_ORIGINS", default="").split(",")
+CORS_ALLOW_ALL_ORIGINS = True  # Added for debug, you can narrow this down later
+CORS_ALLOW_CREDENTIALS = True
+
+# Add ngrok-skip-browser-warning to allowed headers
+from corsheaders.defaults import default_headers
+CORS_ALLOW_HEADERS = list(default_headers) + [
+    "ngrok-skip-browser-warning",
 ]
 
-CSRF_TRUSTED_ORIGINS = [
-    "https://charissa-intuitable-corroboratorily.ngrok-free.dev",
-    "https://switch2onlin677-frontend.vercel.app",
-]
-CORS_ALLOW_CREDENTIALS = True
+# Tell Django we are behind a proxy that provides HTTPS
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+proxy_ssl_header = config("SECURE_PROXY_SSL_HEADER", default=None)
+if proxy_ssl_header:
+    # If set in .env as "HTTP_X_FORWARDED_PROTO,https"
+    SECURE_PROXY_SSL_HEADER = tuple(proxy_ssl_header.split(","))
 
 EMAIL_BACKEND = config("EMAIL_BACKEND")
 EMAIL_HOST = config("EMAIL_HOST")
@@ -163,4 +172,6 @@ META_VERIFY_TOKEN = config("META_VERIFY_TOKEN", default="my_verify_token")
 META_PAGE_ACCESS_TOKEN = config("META_PAGE_ACCESS_TOKEN", default="")
 META_PAGE_ID = config("META_PAGE_ID", default="")
 META_WHATSAPP_PHONE_NUMBER_ID = config("META_WHATSAPP_PHONE_NUMBER_ID", default="")
-META_WHATSAPP_BUSINESS_ACCOUNT_ID = config("META_WHATSAPP_BUSINESS_ACCOUNT_ID", default="")
+META_WHATSAPP_BUSINESS_ACCOUNT_ID = config(
+    "META_WHATSAPP_BUSINESS_ACCOUNT_ID", default=""
+)

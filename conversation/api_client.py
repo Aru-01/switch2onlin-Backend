@@ -27,11 +27,20 @@ class MetaApiClient:
 
     def fetch_user_profile(self, user_id, fields):
         """
-        Fetches user profile data from Meta.
+        Fetches user profile data from Meta Graph API.
+        For Facebook: user_id is the Page-Scoped User ID (PSID).
+        For Instagram: user_id is the Instagram-Scoped User ID (IGSID).
         """
-        url = f"https://graph.facebook.com/v21.0/{user_id}?fields={fields}&access_token={self.page_access_token}"
+        url = f"https://graph.facebook.com/v21.0/{user_id}"
+        params = {
+            "fields": fields,
+            "access_token": self.page_access_token,
+        }
         try:
-            response = requests.get(url)
+            response = requests.get(url, params=params)
+            logger.info(f"Profile fetch for {user_id}: status={response.status_code}, url={response.url}")
+            if response.status_code != 200:
+                logger.error(f"Profile fetch failed: {response.text}")
             return response.status_code, response.json()
         except Exception as e:
             logger.error(f"Meta Profile Fetch Error: {str(e)}")

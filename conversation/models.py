@@ -13,6 +13,8 @@ class MessageTypeChoices(models.TextChoices):
     VIDEO = "video", "Video"
     AUDIO = "audio", "Audio"
     FILE = "file", "File"
+    STICKER = "sticker", "Sticker"
+    LOCATION = "location", "Location"
 
 
 class ConversationSender(models.Model):
@@ -35,7 +37,7 @@ class ConversationMessage(models.Model):
     )
     message_id = models.CharField(max_length=255, unique=True, db_index=True)
     text_content = models.TextField(blank=True, null=True)
-    media_url = models.URLField(max_length=1000, blank=True, null=True)
+    media_url = models.CharField(max_length=1000, blank=True, null=True)
     message_type = models.CharField(
         max_length=20,
         choices=MessageTypeChoices.choices,
