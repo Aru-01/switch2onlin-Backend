@@ -68,7 +68,7 @@ class ConversationSenderViewSet(viewsets.ReadOnlyModelViewSet):
 
     queryset = ConversationSender.objects.all().order_by("-last_interaction")
     serializer_class = ConversationSenderSerializer
-    pagination_class = ConversationPagination
+    # pagination_class = ConversationPagination  # Disabled as per frontend request
 
     @swagger_auto_schema(tags=["Conversations"])
     def list(self, request, *args, **kwargs):
@@ -142,13 +142,17 @@ class SendMessageView(views.APIView):
 
         # Send image first if provided
         if image_url:
-            result = service.send_message(recipient_id, {"type": "image", "link": image_url}, platform)
+            result = service.send_message(
+                recipient_id, {"type": "image", "link": image_url}, platform
+            )
             if "error" in result:
                 return response.Response(result, status=status.HTTP_400_BAD_REQUEST)
 
         # Send text next if provided
         if text:
-            result = service.send_message(recipient_id, {"type": "text", "text": text}, platform)
+            result = service.send_message(
+                recipient_id, {"type": "text", "text": text}, platform
+            )
             if "error" in result:
                 return response.Response(result, status=status.HTTP_400_BAD_REQUEST)
 
@@ -183,32 +187,32 @@ class MediaProxyView(views.APIView):
         tags=["Conversations"],
     )
     def get(self, request, media_id):
-        # Check if we already have this message and if it's already persisted
-        # We look for the exact ID OR a path that contains the ID (like 'conversations/123.jpg')
         from django.db.models import Q
+
         msg = ConversationMessage.objects.filter(
             Q(media_url=media_id) | Q(media_url__icontains=media_id)
         ).first()
-        
+
         service = MetaApiService()
-        
-        # If the message exists, check if it's already persisted
+
         if msg:
             if not str(msg.media_url).isdigit():
-                # Already persisted! Redirect directly
                 from django.http import HttpResponseRedirect
-                serializer = ConversationMessageSerializer(msg, context={"request": request})
+
+                serializer = ConversationMessageSerializer(
+                    msg, context={"request": request}
+                )
                 return HttpResponseRedirect(serializer.data["media_url"])
 
-            # Not persisted yet, try to persist it now
             service.download_and_persist_media(media_id, msg)
             if not str(msg.media_url).isdigit():
-                # It was just persisted! Redirect to the new local URL
                 from django.http import HttpResponseRedirect
-                serializer = ConversationMessageSerializer(msg, context={"request": request})
+
+                serializer = ConversationMessageSerializer(
+                    msg, context={"request": request}
+                )
                 return HttpResponseRedirect(serializer.data["media_url"])
 
-        # Fallback to direct proxy for IDs that aren't yet in our local DB or failed to persist
         status_code, media_info = service.client.get_media_info(media_id)
 
         if status_code != 200:
@@ -228,7 +232,6 @@ class MediaProxyView(views.APIView):
                 status=status.HTTP_404_NOT_FOUND,
             )
 
-        # Download the actual bytes from Meta CDN
         media_response = service.client.download_media_content(download_url)
         if not media_response or media_response.status_code != 200:
             return response.Response(
@@ -236,10 +239,7 @@ class MediaProxyView(views.APIView):
                 status=status.HTTP_502_BAD_GATEWAY,
             )
 
-        # Proxies the response with original Content-Type
         return StreamingHttpResponse(
             media_response.iter_content(chunk_size=8192),
             content_type=media_info.get("mime_type", "application/octet-stream"),
         )
-
-

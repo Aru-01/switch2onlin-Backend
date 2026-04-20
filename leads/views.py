@@ -56,6 +56,7 @@ class LeadViewSet(viewsets.ModelViewSet):
             },
         ),
         responses={201: LeadSerializer()},
+        tags=["Leads"],
     )
     def create(self, request, *args, **kwargs):
         user_id = request.data.get("user_id")
@@ -67,7 +68,6 @@ class LeadViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        # Find the sender
         sender = ConversationSender.objects.filter(sender_id=user_id).first()
         if not sender:
             return Response(
@@ -75,7 +75,6 @@ class LeadViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_404_NOT_FOUND,
             )
 
-        # Create the lead
         lead = Lead.objects.create(sender=sender, interested_product=interested_product)
 
         serializer = self.get_serializer(lead)
@@ -84,6 +83,23 @@ class LeadViewSet(viewsets.ModelViewSet):
     @swagger_auto_schema(
         operation_description="List all leads. Admin only.",
         responses={200: LeadSerializer(many=True)},
+        tags=["Leads"],
     )
     def list(self, request, *args, **kwargs):
         return super().list(request, *args, **kwargs)
+
+    @swagger_auto_schema(tags=["Leads"])
+    def retrieve(self, request, *args, **kwargs):
+        return super().retrieve(request, *args, **kwargs)
+
+    @swagger_auto_schema(tags=["Leads"])
+    def update(self, request, *args, **kwargs):
+        return super().update(request, *args, **kwargs)
+
+    @swagger_auto_schema(tags=["Leads"])
+    def partial_update(self, request, *args, **kwargs):
+        return super().partial_update(request, *args, **kwargs)
+
+    @swagger_auto_schema(tags=["Leads"])
+    def destroy(self, request, *args, **kwargs):
+        return super().destroy(request, *args, **kwargs)

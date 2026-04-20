@@ -179,7 +179,6 @@ META_WHATSAPP_BUSINESS_ACCOUNT_ID = config(
     "META_WHATSAPP_BUSINESS_ACCOUNT_ID", default=""
 )
 
-# Kept for backward compatibility (used as fallback if platform-specific token is missing)
 META_PAGE_ACCESS_TOKEN = config("META_PAGE_ACCESS_TOKEN", default="")
 META_PAGE_ID = config("META_PAGE_ID", default="")
 META_INSTAGRAM_BUSINESS_ACCOUNT_ID = config(

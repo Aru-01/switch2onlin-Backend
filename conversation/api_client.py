@@ -4,28 +4,28 @@ from django.conf import settings
 
 logger = logging.getLogger(__name__)
 
+
 class MetaApiClient:
     def __init__(self):
-        self.whatsapp_phone_number_id = getattr(settings, "META_WHATSAPP_PHONE_NUMBER_ID", "")
+        self.whatsapp_phone_number_id = getattr(
+            settings, "META_WHATSAPP_PHONE_NUMBER_ID", ""
+        )
         page_id = getattr(settings, "META_PAGE_ID", "")
 
-        raw_fb_token = (
-            getattr(settings, "META_FB_PAGE_ACCESS_TOKEN", "")
-            or getattr(settings, "META_PAGE_ACCESS_TOKEN", "")
+        raw_fb_token = getattr(settings, "META_FB_PAGE_ACCESS_TOKEN", "") or getattr(
+            settings, "META_PAGE_ACCESS_TOKEN", ""
         )
         raw_ig_token = (
-            getattr(settings, "META_IG_PAGE_ACCESS_TOKEN", "")
-            or raw_fb_token
+            getattr(settings, "META_IG_PAGE_ACCESS_TOKEN", "") or raw_fb_token
         )
         self.whatsapp_token = (
-            getattr(settings, "META_PAGE_ACCESS_TOKEN", "")
-            or raw_fb_token
+            getattr(settings, "META_PAGE_ACCESS_TOKEN", "") or raw_fb_token
         )
 
-        # Auto-resolve proper Page Access Token from any token type
-        # (works for System User tokens, User tokens, and Page tokens alike)
-        self.fb_token = self._resolve_page_token(raw_fb_token, page_id) if page_id else raw_fb_token
-        self.ig_token = raw_ig_token  # IGA token or falls back to fb_token
+        self.fb_token = (
+            self._resolve_page_token(raw_fb_token, page_id) if page_id else raw_fb_token
+        )
+        self.ig_token = raw_ig_token
 
         # Legacy
         self.page_access_token = self.fb_token
@@ -47,10 +47,12 @@ class MetaApiClient:
                 if page_token:
                     logger.info(f"Page Access Token resolved for page {page_id}.")
                     return page_token
-            logger.warning(f"Could not resolve Page token: {r.status_code} {r.text[:100]}")
+            logger.warning(
+                f"Could not resolve Page token: {r.status_code} {r.text[:100]}"
+            )
         except Exception as e:
             logger.warning(f"Page token resolution failed: {e}")
-        return token  # fall back to original token
+        return token
 
     def get_token_for_platform(self, platform):
         """
@@ -61,8 +63,9 @@ class MetaApiClient:
         - WhatsApp: uses META_PAGE_ACCESS_TOKEN.
         """
         from conversation.models import PlatformChoices
+
         if platform == PlatformChoices.INSTAGRAM:
-            return self.ig_token  # IGA... token, falls back to fb_token if not set
+            return self.ig_token
         elif platform == PlatformChoices.FACEBOOK:
             return self.fb_token
         else:  # whatsapp
@@ -119,7 +122,9 @@ class MetaApiClient:
         try:
             response = requests.get(url, params=params)
             if response.status_code != 200:
-                logger.error(f"Meta Media Info Error: {response.status_code} - {response.text}")
+                logger.error(
+                    f"Meta Media Info Error: {response.status_code} - {response.text}"
+                )
             return response.status_code, response.json()
         except Exception as e:
             logger.error(f"Meta Media Info Exception: {str(e)}")
@@ -130,7 +135,9 @@ class MetaApiClient:
         Downloads the raw media bytes from a Meta CDN URL.
         """
         try:
-            response = requests.get(url, headers=self.get_headers(self.whatsapp_token), stream=True)
+            response = requests.get(
+                url, headers=self.get_headers(self.whatsapp_token), stream=True
+            )
             return response
         except Exception as e:
             logger.error(f"Meta Media Download Error: {str(e)}")

@@ -49,7 +49,6 @@ def can_resend_otp(user):
 
 
 def create_otp(user):
-    # Delete old unverified OTPs
     PasswordResetOTP.objects.filter(user=user, verified=False).delete()
 
     return PasswordResetOTP.objects.create(user=user, code=generate_otp())

@@ -25,7 +25,6 @@ class MetaApiService:
         url = ""
         payload = {}
 
-        # Get the correct token for this platform
         token = self.client.get_token_for_platform(platform)
 
         if platform == PlatformChoices.WHATSAPP:
@@ -42,8 +41,6 @@ class MetaApiService:
                 payload["image"] = {"link": message_data.get("link")}
 
         elif platform == PlatformChoices.FACEBOOK:
-            # api_client auto-resolves a Page Access Token at init,
-            # so /me/messages always works correctly here.
             url = "https://graph.facebook.com/v25.0/me/messages"
             payload = {
                 "recipient": {"id": recipient_id},
@@ -58,13 +55,12 @@ class MetaApiService:
                 }
 
         elif platform == PlatformChoices.INSTAGRAM:
-            # System User token with instagram_manage_messages:
-            # Use /{IG_ACCOUNT_ID}/messages (NOT /me/messages)
-            # IGA token path still supported as fallback for testing
             if token and token.startswith("IGA"):
                 url = "https://graph.instagram.com/v25.0/me/messages"
             else:
-                ig_account_id = getattr(settings, "META_INSTAGRAM_BUSINESS_ACCOUNT_ID", "")
+                ig_account_id = getattr(
+                    settings, "META_INSTAGRAM_BUSINESS_ACCOUNT_ID", ""
+                )
                 url = f"https://graph.facebook.com/v25.0/{ig_account_id}/messages"
             payload = {
                 "recipient": {"id": recipient_id},
@@ -78,8 +74,9 @@ class MetaApiService:
                     "payload": {"url": message_data.get("link"), "is_reusable": True},
                 }
 
-        # Pass platform-specific token to the request
-        status_code, response_data = self.client.send_meta_request(url, payload, token=token)
+        status_code, response_data = self.client.send_meta_request(
+            url, payload, token=token
+        )
 
         logger.info(
             f"[SEND] platform={platform} | recipient={recipient_id} | "
@@ -107,21 +104,16 @@ class MetaApiService:
     def fetch_user_profile(self, user_id, platform):
         if platform == PlatformChoices.WHATSAPP:
             return None
-
-        # Instagram IGSID profile fetch via FB token is unreliable
-        # (requires instagram_manage_messages + specific IG connection).
-        # We skip it gracefully — name comes from webhook contact data.
         if platform == PlatformChoices.INSTAGRAM:
             logger.info(
                 f"Skipping profile fetch for Instagram user {user_id} "
                 "(IGSID lookup not supported with Page token)."
             )
-            # Ensure a fallback name exists
             sender = ConversationSender.objects.filter(sender_id=user_id).first()
             is_placeholder = (
-                not sender.full_name 
-                or sender.full_name == "-" 
-                or sender.full_name.startswith("User-") 
+                not sender.full_name
+                or sender.full_name == "-"
+                or sender.full_name.startswith("User-")
                 or sender.full_name.startswith("IG-User-")
             )
             if sender and is_placeholder:
@@ -136,7 +128,6 @@ class MetaApiService:
 
         fields = "id,name,first_name,last_name,profile_pic"
 
-        # Use the correct token for the platform
         token = self.client.get_token_for_platform(platform)
         status_code, data = self.client.fetch_user_profile(user_id, fields, token=token)
 
@@ -189,7 +180,6 @@ class MetaApiService:
                             if obj_type == "page"
                             else WebhookParser.parse_instagram_event(event)
                         )
-                        # parsed is None for echo messages — skip them
                         if parsed is None:
                             continue
                         self._save_message(**parsed)
@@ -224,14 +214,12 @@ class MetaApiService:
         )
 
         is_placeholder = (
-            not sender.full_name 
-            or sender.full_name == "-" 
-            or sender.full_name.startswith("User-") 
+            not sender.full_name
+            or sender.full_name == "-"
+            or sender.full_name.startswith("User-")
             or sender.full_name.startswith("IG-User-")
             or sender.full_name == sender_id
         )
-
-        # For WhatsApp, the webhook always sends the current profile name, so we can prioritize it
         should_update_name = sender_name and (is_placeholder or platform == "whatsapp")
 
         if should_update_name:
