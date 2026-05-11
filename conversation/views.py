@@ -39,7 +39,16 @@ class WebhookView(views.APIView):
         verify_token = getattr(settings, "META_VERIFY_TOKEN", "my_verify_token")
 
         if mode == "subscribe" and token == verify_token:
+            print("\n" + "="*50)
+            print("✅ WEBHOOK VERIFIED SUCCESSFULLY!")
+            print("="*50 + "\n")
             return response.Response(int(challenge), status=status.HTTP_200_OK)
+        
+        print("\n" + "!"*50)
+        print("❌ WEBHOOK VERIFICATION FAILED!")
+        print(f"Received Token: {token}")
+        print(f"Expected Token: {verify_token}")
+        print("!"*50 + "\n")
         return response.Response("Forbidden", status=status.HTTP_403_FORBIDDEN)
 
     @swagger_auto_schema(
@@ -113,6 +122,7 @@ class SendMessageView(views.APIView):
                 "platform": openapi.Schema(
                     type=openapi.TYPE_STRING, enum=["facebook", "instagram", "whatsapp"]
                 ),
+                "whatsapp_phone_id": openapi.Schema(type=openapi.TYPE_STRING),
             },
             required=["recipient_id"],
         ),
@@ -124,6 +134,7 @@ class SendMessageView(views.APIView):
         text = request.data.get("text")
         image_url = request.data.get("image_url")
         platform = request.data.get("platform", PlatformChoices.FACEBOOK)
+        whatsapp_phone_id = request.data.get("whatsapp_phone_id")
 
         if not recipient_id:
             return response.Response(
@@ -143,7 +154,10 @@ class SendMessageView(views.APIView):
         # Send image first if provided
         if image_url:
             result = service.send_message(
-                recipient_id, {"type": "image", "link": image_url}, platform
+                recipient_id,
+                {"type": "image", "link": image_url},
+                platform,
+                whatsapp_phone_id=whatsapp_phone_id,
             )
             if "error" in result:
                 return response.Response(result, status=status.HTTP_400_BAD_REQUEST)
@@ -151,7 +165,10 @@ class SendMessageView(views.APIView):
         # Send text next if provided
         if text:
             result = service.send_message(
-                recipient_id, {"type": "text", "text": text}, platform
+                recipient_id,
+                {"type": "text", "text": text},
+                platform,
+                whatsapp_phone_id=whatsapp_phone_id,
             )
             if "error" in result:
                 return response.Response(result, status=status.HTTP_400_BAD_REQUEST)

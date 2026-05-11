@@ -14,6 +14,12 @@ class ConversationSenderAdmin(admin.ModelAdmin):
 
 @admin.register(ConversationMessage)
 class ConversationMessageAdmin(admin.ModelAdmin):
-    list_display = ("sender", "message_type", "is_from_customer", "timestamp")
+    list_display = (
+        "sender",
+        "recipient_id",
+        "message_type",
+        "is_from_customer",
+        "timestamp",
+    )
     list_filter = ("is_from_customer", "message_type", "sender__platform")
     search_fields = ("text_content", "sender__full_name", "sender__sender_id")

@@ -71,7 +71,7 @@ class WebhookParser:
         }
 
     @staticmethod
-    def parse_whatsapp_event(msg, contacts=None):
+    def parse_whatsapp_event(msg, contacts=None, metadata=None):
         whatsapp_type = msg.get("type")
         msg_type = MessageTypeChoices.TEXT
         media_url = None
@@ -109,6 +109,8 @@ class WebhookParser:
                     sender_name = profile.get("name")
                     break
 
+        recipient_id = metadata.get("phone_number_id") if metadata else None
+
         return {
             "sender_id": sender_id,
             "platform": PlatformChoices.WHATSAPP,
@@ -117,4 +119,5 @@ class WebhookParser:
             "media_url": media_url,
             "msg_type": msg_type,
             "sender_name": sender_name,
+            "recipient_id": recipient_id,
         }

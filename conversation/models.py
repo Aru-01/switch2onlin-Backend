@@ -44,6 +44,7 @@ class ConversationMessage(models.Model):
         default=MessageTypeChoices.TEXT,
     )
     is_from_customer = models.BooleanField(default=True)
+    recipient_id = models.CharField(max_length=255, blank=True, null=True)
     timestamp = models.DateTimeField()
     created_at = models.DateTimeField(auto_now_add=True)
 
