@@ -185,5 +185,5 @@ META_INSTAGRAM_BUSINESS_ACCOUNT_ID = config(
     "META_INSTAGRAM_BUSINESS_ACCOUNT_ID", default=""
 )
 
-AI_BOT_BASE_URL = config("AI_BOT_BASE_URL", default="")
+AI_BOT_BASE_URL = config("AI_BOT_BASE_URL")
 LEADS_API_KEY = config("LEADS_API_KEY", default="")

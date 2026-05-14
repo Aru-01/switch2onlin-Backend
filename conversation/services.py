@@ -21,14 +21,14 @@ class MetaApiService:
     def __init__(self):
         self.client = MetaApiClient()
 
-    def send_message(self, recipient_id, message_data, platform):
+    def send_message(self, recipient_id, message_data, platform, from_phone_id=None):
         url = ""
         payload = {}
 
         token = self.client.get_token_for_platform(platform)
 
         if platform == PlatformChoices.WHATSAPP:
-            phone_id = self.client.whatsapp_phone_number_id
+            phone_id = from_phone_id or self.client.whatsapp_phone_number_id
             url = f"https://graph.facebook.com/v25.0/{phone_id}/messages"
             payload = {
                 "messaging_product": "whatsapp",
@@ -95,6 +95,7 @@ class MetaApiService:
                 media_url=message_data.get("link"),
                 msg_type=message_data.get("type", "text"),
                 is_from_customer=False,
+                recipient_id=from_phone_id,
             )
             return response_data
         else:
@@ -188,11 +189,12 @@ class MetaApiService:
             for entry in data.get("entry", []):
                 for change in entry.get("changes", []):
                     value = change.get("value", {})
+                    metadata = value.get("metadata", {})
                     messages = value.get("messages", [])
                     contacts = value.get("contacts", [])
                     for msg in messages:
                         parsed = WebhookParser.parse_whatsapp_event(
-                            msg, contacts=contacts
+                            msg, contacts=contacts, metadata=metadata
                         )
                         self._save_message(**parsed)
         return True
@@ -208,6 +210,7 @@ class MetaApiService:
         is_from_customer=True,
         timestamp=None,
         sender_name=None,
+        **kwargs,
     ):
         sender, _ = ConversationSender.objects.get_or_create(
             sender_id=sender_id, defaults={"platform": platform}
@@ -238,6 +241,7 @@ class MetaApiService:
                 "media_url": media_url,
                 "message_type": msg_type,
                 "is_from_customer": is_from_customer,
+                "recipient_id": kwargs.get("recipient_id"),
                 "timestamp": timestamp or timezone.now(),
             },
         )
@@ -273,17 +277,30 @@ class MetaApiService:
         products = bot_res.get("products", [])
 
         if reply_text:
-            self.send_message(sender_id, {"type": "text", "text": reply_text}, platform)
+            self.send_message(
+                sender_id,
+                {"type": "text", "text": reply_text},
+                platform,
+                from_phone_id=message_obj.recipient_id,
+            )
 
         if image_url:
-            self.send_message(sender_id, {"type": "image", "link": image_url}, platform)
+            self.send_message(
+                sender_id,
+                {"type": "image", "link": image_url},
+                platform,
+                from_phone_id=message_obj.recipient_id,
+            )
 
         if products:
             product_text = "*Found Products:*\n"
             for p in products:
                 product_text += f"- {p.get('name')} ({p.get('price')})\n"
             self.send_message(
-                sender_id, {"type": "text", "text": product_text}, platform
+                sender_id,
+                {"type": "text", "text": product_text},
+                platform,
+                from_phone_id=message_obj.recipient_id,
             )
 
     def download_and_persist_media(self, media_id, message_obj):

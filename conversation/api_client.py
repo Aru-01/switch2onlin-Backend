@@ -104,8 +104,8 @@ class MetaApiClient:
         try:
             response = requests.get(url, params=params)
             logger.info(f"Profile fetch for {user_id}: status={response.status_code}")
-            if response.status_code != 200:
-                logger.error(f"Profile fetch failed: {response.text}")
+            # if response.status_code != 200:
+            # logger.error(f"Profile fetch failed: {response.text}")
             return response.status_code, response.json()
         except Exception as e:
             logger.error(f"Meta Profile Fetch Error: {str(e)}")
