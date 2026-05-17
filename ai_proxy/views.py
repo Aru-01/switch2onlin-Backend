@@ -4,7 +4,16 @@ import requests
 from django.conf import settings
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
-from ai_proxy.schemas import PRODUCT_LIST_PARAMETERS, PRODUCT_LIST_RESPONSE
+from ai_proxy.schemas import (
+    PRODUCT_LIST_PARAMETERS,
+    PRODUCT_LIST_RESPONSE,
+    CATEGORY_CREATE_REQUEST,
+    CATEGORY_CREATE_RESPONSE,
+    CATEGORY_DETAILS_RESPONSE,
+    CATEGORY_LIST_PARAMETERS,
+    CATEGORY_LIST_RESPONSE,
+    CATEGORY_OBJECT_SCHEMA,
+)
 
 
 class BaseAIProxyView(views.APIView):
@@ -243,3 +252,62 @@ class ProductDetailProxyView(BaseAIProxyView):
     )
     def delete(self, request, barcode):
         return self.proxy_request("DELETE", f"/products/{barcode}")
+
+
+class CategoryListCreateProxyView(BaseAIProxyView):
+    """
+    Proxy for /categories endpoint
+    """
+
+    @swagger_auto_schema(
+        operation_summary="List Categories",
+        operation_description="""
+Retrieve category list with:
+
+- Search
+- Active filter
+- Pagination
+""",
+        tags=["AI Proxy Categories"],
+        manual_parameters=CATEGORY_LIST_PARAMETERS,
+        responses={
+            200: CATEGORY_LIST_RESPONSE,
+        },
+    )
+    def get(self, request):
+        return self.proxy_request("GET", "/categories", params=request.query_params)
+
+    @swagger_auto_schema(
+        operation_summary="Create Category",
+        operation_description="""
+Create a new category.
+
+Features:
+- Case-insensitive duplicate detection
+- Arabic name support
+""",
+        tags=["AI Proxy Categories"],
+        request_body=CATEGORY_CREATE_REQUEST,
+        responses={
+            201: CATEGORY_CREATE_RESPONSE,
+        },
+    )
+    def post(self, request):
+        return self.proxy_request("POST", "/categories", data=request.data)
+
+
+class CategoryDetailsProxyView(BaseAIProxyView):
+    """
+    Proxy for /categories/{id} endpoint
+    """
+
+    @swagger_auto_schema(
+        operation_summary="Get Category Details",
+        operation_description="Retrieve category details by ID",
+        tags=["AI Proxy Categories"],
+        responses={
+            200: CATEGORY_DETAILS_RESPONSE,
+        },
+    )
+    def get(self, request, id):
+        return self.proxy_request("GET", f"/categories/{id}")
