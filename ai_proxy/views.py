@@ -71,7 +71,7 @@ class RateProxyView(BaseAIProxyView):
 
     @swagger_auto_schema(
         operation_summary="Get current rate",
-        tags=["AI Proxy"],
+        tags=["AI Proxy - USD To IQD"],
     )
     def get(self, request):
         return self.proxy_request("GET", "/rate")
@@ -84,7 +84,7 @@ class RateProxyView(BaseAIProxyView):
                 "iqd_rate": openapi.Schema(type=openapi.TYPE_NUMBER),
             },
         ),
-        tags=["AI Proxy"],
+        tags=["AI Proxy - USD To IQD"],
     )
     def post(self, request):
         return self.proxy_request("POST", "/rate", data=request.data)
