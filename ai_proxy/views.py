@@ -4,6 +4,7 @@ import requests
 from django.conf import settings
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
+from ai_proxy.schemas import PRODUCT_LIST_PARAMETERS, PRODUCT_LIST_RESPONSE
 
 
 class BaseAIProxyView(views.APIView):
@@ -177,21 +178,30 @@ class ProductFilterProxyView(BaseAIProxyView):
     """
     Proxy for /products/filters endpoint
     """
+
     @swagger_auto_schema(
         operation_summary="Get product filters",
         tags=["AI Proxy"],
     )
     def get(self, request):
-        return self.proxy_request("GET", "/products/filters", params=request.query_params)
+        return self.proxy_request(
+            "GET", "/products/filters", params=request.query_params
+        )
 
 
 class ProductListProxyView(BaseAIProxyView):
     """
     Proxy for /products endpoint
     """
+
     @swagger_auto_schema(
-        operation_summary="List products",
+        operation_summary="List Products",
+        operation_description="""
+List, search, filter and paginate products.
+""",
         tags=["AI Proxy"],
+        manual_parameters=PRODUCT_LIST_PARAMETERS,
+        responses={200: PRODUCT_LIST_RESPONSE},
     )
     def get(self, request):
         return self.proxy_request("GET", "/products", params=request.query_params)
@@ -201,6 +211,7 @@ class ProductDetailProxyView(BaseAIProxyView):
     """
     Proxy for /products/{barcode} endpoints (GET, PUT, DELETE)
     """
+
     @swagger_auto_schema(
         operation_summary="Get product by barcode",
         tags=["AI Proxy"],
@@ -232,4 +243,3 @@ class ProductDetailProxyView(BaseAIProxyView):
     )
     def delete(self, request, barcode):
         return self.proxy_request("DELETE", f"/products/{barcode}")
-
