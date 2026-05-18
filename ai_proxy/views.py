@@ -16,7 +16,9 @@ class BaseAIProxyView(views.APIView):
             raise Exception("AI_BOT_BASE_URL not configured")
         return base_url
 
-    def proxy_request(self, method, path, data=None, params=None, files=None):
+    def proxy_request(
+        self, method, path, data=None, params=None, files=None, timeout=120
+    ):
         try:
             base_url = self.get_base_url()
             target_url = f"{base_url}/{path.lstrip('/')}"
@@ -29,7 +31,7 @@ class BaseAIProxyView(views.APIView):
                 data=data if files else None,
                 params=params,
                 files=files,
-                timeout=30,
+                timeout=timeout,
             )
 
             # Try to return JSON if possible, otherwise return raw content
@@ -128,7 +130,12 @@ class KnowledgeUploadProxyView(BaseAIProxyView):
         # Remove files from data to avoid double sending or errors
         data = {k: v for k, v in request.data.items() if k not in request.FILES}
         return self.proxy_request(
-            "POST", "/knowledge/upload", data=data, files=files, params=request.query_params
+            "POST",
+            "/knowledge/upload",
+            data=data,
+            files=files,
+            params=request.query_params,
+            timeout=300,
         )
 
 
@@ -174,7 +181,12 @@ class ProductUploadProxyView(BaseAIProxyView):
         # Remove files from data to avoid double sending or errors
         data = {k: v for k, v in request.data.items() if k not in request.FILES}
         return self.proxy_request(
-            "POST", "/products/upload", data=data, files=files, params=request.query_params
+            "POST",
+            "/products/upload",
+            data=data,
+            files=files,
+            params=request.query_params,
+            timeout=300,
         )
 
 
